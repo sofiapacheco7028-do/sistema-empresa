@@ -180,40 +180,81 @@
 
     </div>
 
-    <script>
+   
+<script type="module">
 
-        const formulario = document.getElementById("loginForm");
+import { supabase } from "./supabase.js";
 
-        formulario.addEventListener("submit", function(event) {
+const formulario = document.getElementById("loginForm");
+const mensaje = document.getElementById("mensaje");
 
-            event.preventDefault();
+// Comprobar si ya existe una sesión
+const { data: sesionActual } = await supabase.auth.getSession();
 
-            const correo = document.getElementById("correo").value;
-            const password = document.getElementById("password").value;
-            const captcha = document.getElementById("captcha").checked;
-            const mensaje = document.getElementById("mensaje");
+if (sesionActual.session) {
+    window.location.href = "panel.html";
+}
 
-            if (!captcha) {
-                mensaje.textContent = "Debes confirmar que no eres un robot.";
-                mensaje.style.color = "red";
-                return;
-            }
+// Iniciar sesión
+formulario.addEventListener("submit", async function(event) {
 
-            if (correo === "" || password === "") {
-                mensaje.textContent = "Completa todos los campos.";
-                mensaje.style.color = "red";
-                return;
-            }
+    event.preventDefault();
 
-            mensaje.textContent = "Datos validados correctamente.";
-            mensaje.style.color = "green";
+    const correo = document.getElementById("correo").value.trim();
+    const password = document.getElementById("password").value;
+    const captcha = document.getElementById("captcha").checked;
 
-            // Posteriormente conectaremos aquí
-            // la autenticación real y el sistema de sesiones.
+    mensaje.style.color = "red";
 
-        });
+    if (!correo || !password) {
+        mensaje.textContent = "Completa todos los campos.";
+        return;
+    }
 
-    </script>
+    if (!captcha) {
+        mensaje.textContent =
+            "Debes confirmar que no eres un robot.";
+        return;
+    }
 
-  </body>
-</html>
+    mensaje.style.color = "#2563eb";
+    mensaje.textContent = "Verificando datos...";
+
+    try {
+
+        const { data, error } =
+            await supabase.auth.signInWithPassword({
+                email: correo,
+                password: password
+            });
+
+        if (error) {
+            throw error;
+        }
+
+        mensaje.style.color = "green";
+        mensaje.textContent = "¡Inicio de sesión exitoso!";
+
+        // Esperar brevemente antes de entrar al panel
+        setTimeout(() => {
+            window.location.href = "panel.html";
+        }, 800);
+
+    } catch (error) {
+
+        mensaje.style.color = "red";
+
+        if (error.message.includes("Email not confirmed")) {
+            mensaje.textContent =
+                "Debes confirmar tu correo electrónico.";
+        } else {
+            mensaje.textContent =
+                "Correo o contraseña incorrectos.";
+        }
+
+        console.error("Error de acceso:", error.message);
+    }
+
+});
+
+</script>
